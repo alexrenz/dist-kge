@@ -216,7 +216,6 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
                 self.model.get_p_embedder().push_all()
             entity_embedding_layer_size = self.model.get_s_embedder()._embeddings.weight.data.shape[0]
             self.local_entities = self.work_scheduler_client.get_local_entities()
-            self.parameter_client.localize(self.local_entities, asynchronous=True)
             init_work_packages = self.local_entities.split(entity_embedding_layer_size)
             for init_work_package in init_work_packages:
                 self.model.get_s_embedder().initialize(
