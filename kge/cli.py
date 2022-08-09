@@ -10,9 +10,9 @@ import warnings
 import torch
 
 try:
-    import lapse
+    import adaps
 except ImportError:
-    warnings.warn("Lapse could not be imported. Only parallel training possible.")
+    warnings.warn("AdaPS could not be imported. Only parallel training possible.")
 
 from kge import Dataset
 from kge import Config

@@ -1,6 +1,6 @@
 import torch
 try:
-    import lapse
+    import adaps
 except ImportError:
     pass
 from enum import IntEnum
@@ -39,8 +39,9 @@ class LapseParameterServer:
         embedding_dim = config.get("lookup_embedder.dim")
         optimizer_dim = get_optimizer_dim(config, embedding_dim)
         num_workers_per_server = 1
-        lapse.setup(num_keys, num_workers_per_server)
-        return lapse.Server(num_keys, embedding_dim + optimizer_dim)
+        adaps.setup(num_keys, num_workers_per_server)
+        value_lengths = torch.ones(num_keys)*(embedding_dim + optimizer_dim)
+        return adaps.Server(value_lengths)
 
 
 class TorchParameterServer:
@@ -136,7 +137,7 @@ def init_lapse_scheduler(config, num_keys):
     set_master_environment(config)
     set_dmlc_environment(config, role="scheduler")
     num_workers_per_server = 1
-    lapse.scheduler(num_keys, num_workers_per_server)
+    adaps.scheduler(num_keys, num_workers_per_server)
 
 
 def init_torch_server(config, num_keys):

@@ -1,8 +1,8 @@
 import torch
 try:
-    import lapse
-    from lapse import Worker as LapseWorker
-    from lapse import Server as LapseServer
+    import adaps
+    from adaps import Worker as LapseWorker
+    from adaps import Server as LapseServer
 except ImportError as e:
     from mock import Mock
     LapseWorker=Mock  # just give something to inherit from
@@ -36,7 +36,16 @@ class KgeParameterClient:
     def set(self, keys, set_tensor, asynchronous=False):
         raise NotImplementedError()
 
+    def advance_clock(self):
+        pass
+
+    def current_clock(self):
+        raise NotImplementedError()
+
     def localize(self, keys, asynchronous=False):
+        raise NotImplementedError()
+
+    def intent(self, keys, start, end=0):
         raise NotImplementedError()
 
     def wait(self, wait_value):
@@ -96,7 +105,7 @@ class LapseParameterClient(LapseWorker, KgeParameterClient):
         lapse_server: LapseServer,
     ):
         KgeParameterClient.__init__(self, config, rank)
-        LapseWorker.__init__(self, customer_id, rank, lapse_server)
+        LapseWorker.__init__(self, customer_id, lapse_server)
         self.key_size = self.get_key_size()
         self._stop_key = torch.LongTensor([self.num_keys - self.num_meta_keys])
         self._optim_entity_step_key = torch.LongTensor(
@@ -135,8 +144,17 @@ class LapseParameterClient(LapseWorker, KgeParameterClient):
     def set(self, keys, set_tensor, asynchronous=False):
         super(LapseParameterClient, self).set(keys, set_tensor, asynchronous)
 
+    def advance_clock(self):
+        super(LapseParameterClient, self).advance_clock()
+
+    def current_clock(self):
+        return super(LapseParameterClient, self).current_clock()
+
     def localize(self, keys, asynchronous=False):
-        super(LapseParameterClient, self).localize(keys, asynchronous)
+        raise NotImplementedError()
+
+    def intent(self, keys, start, end=0):
+        super(LapseParameterClient, self).intent(keys, start, end)
 
     def barrier(self):
         dist.barrier(group=self.worker_group)
