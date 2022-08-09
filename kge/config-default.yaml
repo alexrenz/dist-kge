@@ -74,6 +74,7 @@ job:
     repartition_epoch: True  # currently only works with stratification and random
     pre_localize_partition: False
     pre_localize_batch: False # pre localize entities in batch one batch ahead
+    signal_intent_for_batch: 1 # N>0: send intent signals for batch N with an offset of N batches
     scheduler_data_type: int32 # torch type used for communication of the work scheduler
 
     stratification:

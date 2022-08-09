@@ -266,6 +266,14 @@ class DistributedLookupEmbedder(LookupEmbedder):
         #  this needs to be handled in the background somehow
         #  to device can be done in background, but this needs to wait for localize
 
+    def intent(self, indexes: Tensor, start, make_unique=False):
+        if make_unique:
+            indexes = torch.unique(indexes)
+        self.parameter_client.intent(
+            (indexes + self.lapse_offset).cpu(),
+            start
+        )
+
     def _embed(self, indexes: Tensor) -> Tensor:
         long_indexes = indexes.long()
         return self._embeddings(long_indexes)

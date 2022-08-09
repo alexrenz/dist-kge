@@ -175,6 +175,9 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
         self.pre_localize_batch = int(
             self.config.get("job.distributed.pre_localize_batch")
         )
+        self.signal_intent_for_batch = int(
+            self.config.get("job.distributed.signal_intent_for_batch")
+        )
         self.entity_mapper_tensors = deque()
         for i in range(self.config.get("train.num_workers") + 1):
             self.entity_mapper_tensors.append(
@@ -183,6 +186,10 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
 
         # also defines the local entities
         self._initialize_parameter_server(init_for_load_only=init_for_load_only)
+
+        # batch counters (used for intent signaling)
+        self.num_batches_prepped = 0
+        self.num_batches_processed = 0
 
         def stop_and_wait(job):
             job.parameter_client.stop()
@@ -383,6 +390,17 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
             self.model.get_s_embedder().localize(
                 batches[-1]["unique_entities"],
                 asynchronous=True
+            )
+
+        # signal intent
+        if self.signal_intent_for_batch > 0:
+            self.model.get_s_embedder().intent(
+                batches[-1]["unique_entities"],
+                self.num_batches_prepped
+            )
+            self.model.get_p_embedder().intent(
+                batches[-1]["unique_relations"],
+                self.num_batches_prepped
             )
 
     def _prepare_batch(
@@ -647,7 +665,7 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
             # process each batch
             pre_load_batches = deque()
             batch_index = 0
-            num_prepulls = max(self.entity_pre_pull, self.relation_pre_pull, self.pre_localize_batch, 1)
+            num_prepulls = max(self.entity_pre_pull, self.relation_pre_pull, self.pre_localize_batch, self.signal_intent_for_batch, 1)
             while batch_index < len(self.dataloader_dataset):
                 while len(pre_load_batches) < num_prepulls + 1:
                     prepare_time -= time.time()
@@ -664,6 +682,7 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
                         self._prepare_batch_ahead(pre_load_batches)
                     pre_pull_time += time.time()
                     prepare_time += time.time()
+                    self.num_batches_prepped = self.num_batches_prepped + 1
                 batch = pre_load_batches.popleft()
 
                 # create initial batch trace (yet incomplete)
@@ -807,6 +826,10 @@ class TrainingJobNegativeSamplingDistributed(TrainingJobNegativeSampling):
                 ps_wait_time += batch_result.ps_wait_time
 
                 batch_index += 1
+
+                # advance the clock
+                self.num_batches_processed = self.num_batches_processed + 1
+                self.parameter_client.advance_clock()
 
             # all done; now trace and log
             epoch_time += time.time()
