@@ -9,7 +9,7 @@ setup(
     author_email="rgemulla@uni-mannheim.de",
     packages=["kge"],
     install_requires=[
-        "torch==1.7.1",
+        "torch",
         "pyyaml",
         "pandas",
         "argparse",
